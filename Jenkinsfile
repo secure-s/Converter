@@ -2,9 +2,7 @@ pipeline {
     agent any
     stages {
         stage('1. Checkout') {
-            steps { 
-                checkout scm 
-            }
+            steps { checkout scm }
         }
         stage('2. Docker Build & Push') {
             steps {
@@ -17,11 +15,11 @@ pipeline {
                 }
             }
         }
-        stage('3. Start Minikube (Fixed Memory)') {
+        stage('3. Start Minikube (Auto Resources)') {
             steps {
                 sh '''
                 minikube delete --all --purge || true
-                minikube start --driver=docker --memory=2048 --cpus=1 || true
+                minikube start --driver=docker
                 eval $(minikube docker-env)
                 kubectl cluster-info || true
                 '''
@@ -32,7 +30,7 @@ pipeline {
                 sh '''
                 kubectl apply -f k8s-deployment.yaml
                 kubectl rollout status deployment/webapp --timeout=300s || true
-                kubectl port-forward service/webapp-service 8081:80 &
+                nohup kubectl port-forward service/webapp-service 8081:80 > /dev/null 2>&1 &
                 echo "✅ App live at: http://13.60.66.81:8081"
                 echo "✅ Jenkins: http://13.60.66.81:8080"
                 '''
@@ -48,11 +46,8 @@ pipeline {
             '''
         }
         success {
-            echo '🎉 FULL PIPELINE SUCCESS: GitHub→Jenkins→Docker→Kubernetes!'
-            echo '📱 Access your app: http://13.60.66.81:8081'
-        }
-        failure {
-            echo '❌ Pipeline failed. Check Minikube logs above.'
+            echo '🎉 FULL PIPELINE: GitHub→Jenkins→Docker→Kubernetes!'
+            echo '🌐 App: http://13.60.66.81:8081'
         }
     }
 }
